@@ -5,6 +5,7 @@ import com.trecapps.auth.models.TcUser;
 import com.trecapps.auth.services.UserStorageService;
 import com.trecapps.pictures.models.Picture;
 import com.trecapps.pictures.models.PictureData;
+import com.trecapps.pictures.models.PicturePermissions;
 import com.trecapps.pictures.models.Profile;
 import com.trecapps.pictures.repos.PictureRepo;
 import com.trecapps.pictures.repos.ProfileRepo;
@@ -17,6 +18,8 @@ import org.springframework.stereotype.Service;
 import javax.validation.constraints.NotNull;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class PictureManager {
@@ -54,13 +57,21 @@ public class PictureManager {
         }
     }
 
-    private boolean hasAccess(String user)
+    private boolean hasAccess(String user, String brand, Picture pic)
     {
-        return true;
+        if(pic.getUserId().equals(user))
+            return true;
+
+        PicturePermissions permissions = pictureStorageService.retrievePermissions(pic.getId());
+        if(permissions == null || permissions.isPublic())
+            return true;
+        List<String> users = permissions.getUserId();
+        List<String> brands = permissions.getBrandId();
+        return (users != null && users.contains(user)) || (brands != null && brands.contains(brand));
     }
 
     public void addNewPicture(@NotNull String user, String name, @NotNull String ext,
-                                  @NotNull String data, byte content)
+                                  @NotNull String data, boolean isPublic, byte content)
     {
         Picture pic = new Picture();
         pic.setExtension(ext);
@@ -70,15 +81,15 @@ public class PictureManager {
 
         pic = pictureRepo.save(pic);
 
-        pictureStorageService.uploadPicture(data, pic.getId(), ext);
+        pictureStorageService.uploadPicture(data, pic.getId(), ext, isPublic);
     }
 
     public void addNewPicture(@NotNull String user, String name, @NotNull String ext,
-                       @NotNull String data) {
-        addNewPicture(user,name, ext, data, (byte)0);
+                       @NotNull String data, boolean isPublic) {
+        addNewPicture(user,name, ext, data, isPublic, (byte)0);
     }
 
-    public PictureData retrievePicture(@NotNull String id, String user)
+    public PictureData retrievePicture(@NotNull String id, String user, String brand)
     {
         PictureData ret = new PictureData();
         if(!pictureRepo.existsById(id))
@@ -91,7 +102,7 @@ public class PictureManager {
 
         byte contentThreshold = (byte) (topFree ? 0 : 1);
 
-        boolean permitted = hasAccess(user) // First make sure the user has access, for not it will be true
+        boolean permitted = hasAccess(user, brand, pic) // First make sure the user has access, for not it will be true
                 && ((pic.getContentRestriction() <= contentThreshold) // Is there an age restriction
                 || isAdult(user)); // If there is an age restriction, then make sure requester is an adult
 
@@ -151,6 +162,60 @@ public class PictureManager {
         ret.setName(pic.getName());
         ret.setExt(pic.getExtension());
         return ret;
+    }
+
+    public int makePicturePublic(@NotNull String user, @NotNull String id, boolean access)
+    {
+        if(!pictureRepo.existsById(id))
+            return 404;
+        Picture pic = pictureRepo.getById(id);
+        if(!user.equals(pic.getUserId()))
+            return 403;
+        PicturePermissions permissions = pictureStorageService.retrievePermissions(id);
+        permissions.setPublic(access);
+
+        pictureStorageService.uploadPermissions(permissions, id);
+        return 200;
+    }
+
+    public int addBrand(@NotNull String owner, @NotNull String id, @NotNull String brand)
+    {
+        if(!pictureRepo.existsById(id))
+            return 404;
+        Picture pic = pictureRepo.getById(id);
+        if(!owner.equals(pic.getUserId()))
+            return 403;
+        PicturePermissions permissions = pictureStorageService.retrievePermissions(id);
+        if(null == permissions)
+            return 500;
+
+        List<String> brands = permissions.getBrandId();
+        if(null == brands)
+            brands = new ArrayList<>();
+        brands.add(brand);
+        permissions.setBrandId(brands);
+        pictureStorageService.uploadPermissions(permissions, id);
+        return 200;
+    }
+
+    public int addUser(@NotNull String owner, @NotNull String id, @NotNull String user)
+    {
+        if(!pictureRepo.existsById(id))
+            return 404;
+        Picture pic = pictureRepo.getById(id);
+        if(!owner.equals(pic.getUserId()))
+            return 403;
+        PicturePermissions permissions = pictureStorageService.retrievePermissions(id);
+        if(null == permissions)
+            return 500;
+
+        List<String> users = permissions.getUserId();
+        if(null == users)
+            users = new ArrayList<>();
+        users.add(user);
+        permissions.setUserId(users);
+        pictureStorageService.uploadPermissions(permissions, id);
+        return 200;
     }
 
 }
