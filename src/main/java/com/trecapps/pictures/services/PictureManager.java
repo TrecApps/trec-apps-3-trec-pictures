@@ -70,7 +70,7 @@ public class PictureManager {
         return (users != null && users.contains(user)) || (brands != null && brands.contains(brand));
     }
 
-    public void addNewPicture(@NotNull String user, String name, @NotNull String ext,
+    public String addNewPicture(@NotNull String user, String name, @NotNull String ext,
                                   @NotNull String data, boolean isPublic, byte content)
     {
         Picture pic = new Picture();
@@ -82,11 +82,13 @@ public class PictureManager {
         pic = pictureRepo.save(pic);
 
         pictureStorageService.uploadPicture(data, pic.getId(), ext, isPublic);
+
+        return pic.getId();
     }
 
-    public void addNewPicture(@NotNull String user, String name, @NotNull String ext,
+    public String addNewPicture(@NotNull String user, String name, @NotNull String ext,
                        @NotNull String data, boolean isPublic) {
-        addNewPicture(user,name, ext, data, isPublic, (byte)0);
+        return addNewPicture(user,name, ext, data, isPublic, (byte)0);
     }
 
     public PictureData retrievePicture(@NotNull String id, String user, String brand)
