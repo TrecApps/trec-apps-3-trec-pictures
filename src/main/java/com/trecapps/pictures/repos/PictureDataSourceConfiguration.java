@@ -22,8 +22,8 @@ import java.util.Map;
 @Configuration
 @EnableTransactionManagement
 @EnableJpaRepositories (
-		entityManagerFactoryRef = "primaryEntityManagerFactory",
-        transactionManagerRef = "primaryTransactionManager",
+		entityManagerFactoryRef = "pictureEntityManagerFactory",
+        transactionManagerRef = "pictureTransactionManager",
         basePackages = {"com.trecapps.pictures.repos"})
 public class PictureDataSourceConfiguration
 {
