@@ -145,7 +145,7 @@ public class PictureManager {
     public PictureData getProfile(@NotNull String user)
     {
         PictureData ret = new PictureData();
-        if(profileRepo.existsById(user))
+        if(!profileRepo.existsById(user))
         {
             ret.setError("Could not find Profile of User");
             return ret;
@@ -164,6 +164,31 @@ public class PictureManager {
         ret.setName(pic.getName());
         ret.setExt(pic.getExtension());
         return ret;
+    }
+
+    public String getProfilePicName(String userId)
+    {
+        if(!profileRepo.existsById(userId))
+            return null;
+        Profile profile = profileRepo.getById(userId);
+        if(!pictureRepo.existsById(profile.getPictureId()))
+            return null;
+        Picture picture = pictureRepo.getById(profile.getPictureId());
+        return picture.getExtension();
+    }
+
+    public byte[] getProfilePic(String user, String extension)
+    {
+        if(!profileRepo.existsById(user))
+            return null;
+        Profile profile = profileRepo.getById(user);
+        if(!pictureRepo.existsById(profile.getPictureId()))
+            return null;
+        Picture picture = pictureRepo.getById(profile.getPictureId());
+        if(!picture.getExtension().equalsIgnoreCase(extension))
+            return null;
+        return pictureStorageService.retrieveImage(
+                String.format("%s.%s", picture.getName(), extension));
     }
 
     public int makePicturePublic(@NotNull String user, @NotNull String id, boolean access)

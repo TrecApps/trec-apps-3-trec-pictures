@@ -79,6 +79,14 @@ public class PictureStorageService {
         return Base64.getEncoder().encodeToString(client.downloadContent().toBytes());
     }
 
+    byte[] retrieveImage(String file)
+    {
+        BlobContainerClient containerClient = client.getBlobContainerClient("trec-apps-pictures");
+
+        BlobClient client = containerClient.getBlobClient(file);
+        return client.downloadContent().toBytes();
+    }
+
     PicturePermissions retrievePermissions(String name)
     {
         BlobContainerClient containerClient = client.getBlobContainerClient("trec-apps-pictures");
