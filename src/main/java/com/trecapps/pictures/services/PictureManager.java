@@ -187,8 +187,10 @@ public class PictureManager {
         Picture picture = pictureRepo.getById(profile.getPictureId());
         if(!picture.getExtension().equalsIgnoreCase(extension))
             return null;
-        return pictureStorageService.retrieveImage(
-                String.format("%s.%s", picture.getName(), extension));
+
+        String fileName = String.format("%s.%s", picture.getId(), extension);
+        LOGGER.info("Retrieving File Profile Pic '{}'", fileName);
+        return pictureStorageService.retrieveImage(fileName);
     }
 
     public int makePicturePublic(@NotNull String user, @NotNull String id, boolean access)
