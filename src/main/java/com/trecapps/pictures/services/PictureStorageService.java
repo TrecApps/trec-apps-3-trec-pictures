@@ -54,7 +54,7 @@ public class PictureStorageService {
 
 
         PicturePermissions permissions = new PicturePermissions();
-        permissions.setPublic(true);
+        permissions.setPublic(isPublic);
         uploadPermissions(permissions, name);
 
     }
