@@ -91,6 +91,15 @@ public class PictureManager {
         return addNewPicture(user,name, ext, data, isPublic, (byte)0);
     }
 
+    public Picture retrievePictureObject(String id)
+    {
+        if(!pictureRepo.existsById(id))
+        {
+            return null;
+        }
+        return pictureRepo.getById(id);
+    }
+
     public PictureData retrievePicture(@NotNull String id, String user, String brand)
     {
         PictureData ret = new PictureData();
@@ -166,6 +175,14 @@ public class PictureManager {
         return ret;
     }
 
+    public String getPicName(String id)
+    {
+        if(!pictureRepo.existsById(id))
+            return null;
+        Picture picture = pictureRepo.getById(id);
+        return picture.getExtension();
+    }
+
     public String getProfilePicName(String userId)
     {
         if(!profileRepo.existsById(userId))
@@ -175,6 +192,17 @@ public class PictureManager {
             return null;
         Picture picture = pictureRepo.getById(profile.getPictureId());
         return picture.getExtension();
+    }
+
+    public byte[] getPic(String id, String extension)
+    {
+        Picture picture = pictureRepo.getById(id);
+        if(!picture.getExtension().equalsIgnoreCase(extension))
+            return null;
+
+        String fileName = String.format("%s.%s", picture.getId(), extension);
+        LOGGER.info("Retrieving File Profile Pic '{}'", fileName);
+        return pictureStorageService.retrieveImage(fileName);
     }
 
     public byte[] getProfilePic(String user, String extension)
