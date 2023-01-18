@@ -3,10 +3,8 @@ package com.trecapps.pictures.services;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.trecapps.auth.models.TcUser;
 import com.trecapps.auth.services.UserStorageService;
-import com.trecapps.pictures.models.Picture;
-import com.trecapps.pictures.models.PictureData;
-import com.trecapps.pictures.models.PicturePermissions;
-import com.trecapps.pictures.models.Profile;
+import com.trecapps.pictures.models.*;
+import com.trecapps.pictures.repos.BrandPicRepo;
 import com.trecapps.pictures.repos.PictureRepo;
 import com.trecapps.pictures.repos.ProfileRepo;
 import org.slf4j.Logger;
@@ -34,6 +32,9 @@ public class PictureManager {
 
     @Autowired
     ProfileRepo profileRepo;
+
+    @Autowired
+    BrandPicRepo brandPicRepo;
 
     @Autowired
     UserStorageService userStorageService;
@@ -175,6 +176,52 @@ public class PictureManager {
         return ret;
     }
 
+    public String setBrandProfile(@NotNull String brand, @NotNull String user, @NotNull String pictureId)
+    {
+        if(!pictureRepo.existsById(pictureId))
+            return "404: Profile not available";
+
+        Picture pic = pictureRepo.getById(pictureId);
+
+        if(!user.equals(pic.getUserId()))
+            return "403: Can't assign someone else's picture to your profile picture!";
+
+        byte contentThreshold = (byte) (topFree ? 0 : 1);
+        if(pic.getContentRestriction() > contentThreshold)
+            return "403: Can't assign a NSFW picture as your profile picture!";
+
+        BrandProfile prof = new BrandProfile();
+        prof.setPictureId(pictureId);
+        prof.setUserId(brand);
+
+        brandPicRepo.save(prof);
+        return "200: Profile Set!";
+    }
+
+    public PictureData getBrandProfile(@NotNull String brand)
+    {
+        PictureData ret = new PictureData();
+        if(!brandPicRepo.existsById(brand))
+        {
+            ret.setError("Could not find Profile of User");
+            return ret;
+        }
+
+        BrandProfile profile = brandPicRepo.getById(brand);
+
+        if(!pictureRepo.existsById(profile.getPictureId()))
+        {
+            ret.setError("Could not find Image of User");
+            return ret;
+        }
+
+        Picture pic = pictureRepo.getById(profile.getPictureId());
+        ret.setData(pictureStorageService.retrieveImage(pic.getId(), pic.getExtension()));
+        ret.setName(pic.getName());
+        ret.setExt(pic.getExtension());
+        return ret;
+    }
+
     public String getPicName(String id)
     {
         if(!pictureRepo.existsById(id))
@@ -188,6 +235,17 @@ public class PictureManager {
         if(!profileRepo.existsById(userId))
             return null;
         Profile profile = profileRepo.getById(userId);
+        if(!pictureRepo.existsById(profile.getPictureId()))
+            return null;
+        Picture picture = pictureRepo.getById(profile.getPictureId());
+        return picture.getExtension();
+    }
+
+    public String getBrandProfilePicName(String userId)
+    {
+        if(!brandPicRepo.existsById(userId))
+            return null;
+        BrandProfile profile = brandPicRepo.getById(userId);
         if(!pictureRepo.existsById(profile.getPictureId()))
             return null;
         Picture picture = pictureRepo.getById(profile.getPictureId());
@@ -218,6 +276,22 @@ public class PictureManager {
 
         String fileName = String.format("%s.%s", picture.getId(), extension);
         LOGGER.info("Retrieving File Profile Pic '{}'", fileName);
+        return pictureStorageService.retrieveImage(fileName);
+    }
+
+    public byte[] getBrandProfilePic(String user, String extension)
+    {
+        if(!brandPicRepo.existsById(user))
+            return null;
+        BrandProfile profile = brandPicRepo.getById(user);
+        if(!pictureRepo.existsById(profile.getPictureId()))
+            return null;
+        Picture picture = pictureRepo.getById(profile.getPictureId());
+        if(!picture.getExtension().equalsIgnoreCase(extension))
+            return null;
+
+        String fileName = String.format("%s.%s", picture.getId(), extension);
+        LOGGER.info("Retrieving File Brand-Profile Pic '{}'", fileName);
         return pictureStorageService.retrieveImage(fileName);
     }
 
